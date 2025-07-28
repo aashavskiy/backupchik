@@ -7,9 +7,19 @@
 # Exit on any error
 set -e
 
+# Load environment variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+else
+    echo "Error: .env file not found in $SCRIPT_DIR"
+    echo "Please copy .env.example to .env and configure your paths"
+    exit 1
+fi
+
 # Base directories
-SOURCE="/Volumes/SSD1"
-BACKUP_ROOT="/Volumes/SSD2/Backups/SSD1/daily"
+SOURCE="$SSD1_VOLUME"
+BACKUP_ROOT="$SSD1_DAILY_BACKUP_DIR"
 
 # Create timestamp for current backup
 TIMESTAMP=$(date +%Y-%m-%d)
@@ -25,8 +35,8 @@ if [ ! -d "$SOURCE" ]; then
 fi
 
 # Check if destination drive is mounted
-if [ ! -d "/Volumes/SSD2" ]; then
-    echo "Error: Destination drive /Volumes/SSD2 is not mounted!"
+if [ ! -d "$SSD2_VOLUME" ]; then
+    echo "Error: Destination drive $SSD2_VOLUME is not mounted!"
     exit 1
 fi
 

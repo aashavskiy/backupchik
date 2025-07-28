@@ -7,9 +7,19 @@
 # Exit on any error
 set -e
 
+# Load environment variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+else
+    echo "Error: .env file not found in $SCRIPT_DIR"
+    echo "Please copy .env.example to .env and configure your paths"
+    exit 1
+fi
+
 # Base directories
-BACKUP_ROOT="/Volumes/SSD1/Backups/MacBook/hourly"
-SOURCE="/"
+BACKUP_ROOT="$MACBOOK_HOURLY_BACKUP_DIR"
+SOURCE="$SOURCE_ROOT"
 
 # Create timestamp for current backup
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
@@ -18,11 +28,22 @@ CURRENT_BACKUP="$BACKUP_ROOT/$TIMESTAMP"
 # Find the latest backup for hardlinking
 LATEST_BACKUP=$(find "$BACKUP_ROOT" -maxdepth 1 -type d | grep -E "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}$" | sort -r | head -n1)
 
+# Check if source drive is mounted
+if [ ! -d "$SOURCE" ]; then
+    echo "Error: Source directory $SOURCE is not accessible!"
+    exit 1
+fi
+
+# Check if destination drive is mounted
+if [ ! -d "$(dirname "$BACKUP_ROOT")" ]; then
+    echo "Error: Destination drive $(dirname "$BACKUP_ROOT") is not mounted!"
+    exit 1
+fi
+
 # Ensure backup root exists
 mkdir -p "$BACKUP_ROOT"
 
 # Get script directory for relative paths
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXCLUDE_FILE="$SCRIPT_DIR/exclude_patterns.txt"
 
 # Check if exclude file exists

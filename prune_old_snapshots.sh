@@ -8,9 +8,19 @@
 # Exit on any error
 set -e
 
+# Load environment variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+else
+    echo "Error: .env file not found in $SCRIPT_DIR"
+    echo "Please copy .env.example to .env and configure your paths"
+    exit 1
+fi
+
 # Backup locations
-HOURLY_BACKUP_ROOT="/Volumes/SSD1/Backups/MacBook/hourly"
-DAILY_BACKUP_ROOT="/Volumes/SSD2/Backups/SSD1/daily"
+HOURLY_BACKUP_ROOT="$MACBOOK_HOURLY_BACKUP_DIR"
+DAILY_BACKUP_ROOT="$SSD1_DAILY_BACKUP_DIR"
 
 # Retention periods (in days)
 HOURLY_RETENTION=30

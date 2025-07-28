@@ -25,8 +25,41 @@ Maintains backup retention by removing old snapshots:
 
 ## Setup Instructions
 
-1. Clone this repository to your local machine
-2. Make scripts executable:
+1. Clone this repository to your local machine:
+   ```bash
+   git clone https://github.com/aashavskiy/backupchik.git
+   cd backupchik
+   ```
+
+2. Configure your paths:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` file to set your backup paths and retention periods:
+   ```bash
+   # Source paths
+   SOURCE_ROOT="/"
+   
+   # SSD1 backup paths
+   SSD1_VOLUME="/Volumes/SSD1"
+   SSD1_BACKUP_ROOT="/Volumes/SSD1/Backups"
+   MACBOOK_HOURLY_BACKUP_DIR="/Volumes/SSD1/Backups/MacBook/hourly"
+   
+   # SSD2 backup paths
+   SSD2_VOLUME="/Volumes/SSD2"
+   SSD2_BACKUP_ROOT="/Volumes/SSD2/Backups"
+   SSD1_DAILY_BACKUP_DIR="/Volumes/SSD2/Backups/SSD1/daily"
+   
+   # Retention periods (in days)
+   HOURLY_RETENTION=30
+   DAILY_RETENTION=90
+   ```
+
+3. Configure exclusions:
+   - Edit `exclude_patterns.txt` to specify which files and directories to exclude from backup
+   - Default exclusions include system directories, caches, and temporary files
+
+4. Make scripts executable:
    ```bash
    chmod +x hourly_backup.sh daily_clone_ssd1_to_ssd2.sh prune_old_snapshots.sh
    ```
@@ -125,4 +158,6 @@ Add the following to your crontab (`crontab -e`):
 2. First backup might take longer as it's a full copy
 3. Subsequent backups are incremental and much faster
 4. Scripts use hardlinks to save space while maintaining full snapshots
-5. Check logs regularly to ensure backups are running correctly 
+5. Check logs regularly to ensure backups are running correctly
+6. All paths and retention periods can be configured in `.env` file
+7. Exclusion patterns can be modified in `exclude_patterns.txt` 
