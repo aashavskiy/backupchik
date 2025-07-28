@@ -8,23 +8,27 @@
 # Exit on any error
 set -e
 
-# Load environment variables
+# Get script directory for relative paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    source "$SCRIPT_DIR/.env"
+
+# Load configurations
+if [ -f "$SCRIPT_DIR/var/paths.conf" ]; then
+    source "$SCRIPT_DIR/var/paths.conf"
 else
-    echo "Error: .env file not found in $SCRIPT_DIR"
-    echo "Please copy .env.example to .env and configure your paths"
+    echo "Error: paths.conf not found in $SCRIPT_DIR/var"
+    exit 1
+fi
+
+if [ -f "$SCRIPT_DIR/var/retention.conf" ]; then
+    source "$SCRIPT_DIR/var/retention.conf"
+else
+    echo "Error: retention.conf not found in $SCRIPT_DIR/var"
     exit 1
 fi
 
 # Backup locations
 HOURLY_BACKUP_ROOT="$MACBOOK_HOURLY_BACKUP_DIR"
 DAILY_BACKUP_ROOT="$SSD1_DAILY_BACKUP_DIR"
-
-# Retention periods (in days)
-HOURLY_RETENTION=30
-DAILY_RETENTION=90
 
 # Function to safely remove old backups
 remove_old_backups() {

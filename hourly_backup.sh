@@ -7,13 +7,14 @@
 # Exit on any error
 set -e
 
-# Load environment variables
+# Get script directory for relative paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    source "$SCRIPT_DIR/.env"
+
+# Load configuration
+if [ -f "$SCRIPT_DIR/var/paths.conf" ]; then
+    source "$SCRIPT_DIR/var/paths.conf"
 else
-    echo "Error: .env file not found in $SCRIPT_DIR"
-    echo "Please copy .env.example to .env and configure your paths"
+    echo "Error: paths.conf not found in $SCRIPT_DIR/var"
     exit 1
 fi
 
@@ -43,7 +44,7 @@ fi
 # Ensure backup root exists
 mkdir -p "$BACKUP_ROOT"
 
-# Get script directory for relative paths
+# Get exclude file path
 EXCLUDE_FILE="$SCRIPT_DIR/exclude_patterns.txt"
 
 # Check if exclude file exists
