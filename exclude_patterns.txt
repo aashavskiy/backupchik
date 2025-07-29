@@ -25,11 +25,17 @@
 /private/tmp/*     # macOS temporary files
 
 # macOS specific
-.Spotlight-V100    # Spotlight index
-.TemporaryItems    # Temporary items
-.Trashes           # Trash folders
-.fseventsd         # File system events
-.DS_Store          # Finder settings files
+.Spotlight-V100/    # Spotlight index
+.TemporaryItems/    # Temporary items
+.Trashes/           # Trash folders
+.fseventsd/         # File system events
+.DocumentRevisions-V100/  # Document versions
+.SyncServices/      # Sync services
+.Metadata/          # Metadata storage
+.hotfiles.btree     # Hot files
+.DS_Store           # Finder settings files
+._.DS_Store         # DS_Store resource fork
+.apdisk             # AFP share point
 
 # Development and build files
 node_modules       # NPM packages
