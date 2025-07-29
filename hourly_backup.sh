@@ -7,86 +7,86 @@
 # Exit on any error
 set -e
 
-# Get script directory for relative paths
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Source configuration files
+source "var/paths.conf"
 
-# Load configuration
-if [ -f "$SCRIPT_DIR/var/paths.conf" ]; then
-    source "$SCRIPT_DIR/var/paths.conf"
-else
-    echo "Error: paths.conf not found in $SCRIPT_DIR/var"
+# Check if exclude patterns file exists
+EXCLUDE_FILE="exclude_patterns.txt"
+if [ ! -f "$EXCLUDE_FILE" ]; then
+    echo "Error: Exclude patterns file $EXCLUDE_FILE not found!"
     exit 1
 fi
 
-# Base directories
-BACKUP_ROOT="$MACBOOK_HOURLY_BACKUP_DIR"
-SOURCE="$SOURCE_ROOT"
+# Check if source directory exists and is readable
+if [ ! -d "$SOURCE_ROOT" ]; then
+    echo "Error: Source directory $SOURCE_ROOT does not exist!"
+    exit 1
+fi
+
+if [ ! -r "$SOURCE_ROOT" ]; then
+    echo "Error: Source directory $SOURCE_ROOT is not readable!"
+    exit 1
+fi
+
+# Check if destination volume is mounted and writable
+if [ ! -d "$SSD1_VOLUME" ]; then
+    echo "Error: Destination drive $SSD1_VOLUME is not mounted!"
+    echo "Please connect the backup drive and try again."
+    exit 1
+fi
+
+if [ ! -w "$SSD1_VOLUME" ]; then
+    echo "Error: Destination drive $SSD1_VOLUME is not writable!"
+    echo "Please check permissions and try again."
+    exit 1
+fi
 
 # Create timestamp for current backup
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
-CURRENT_BACKUP="$BACKUP_ROOT/$TIMESTAMP"
-LOG_FILE="$BACKUP_ROOT/backup_${TIMESTAMP}.log"
+CURRENT_BACKUP="$MACBOOK_HOURLY_BACKUP_DIR/$TIMESTAMP"
+
+# Ensure backup directory exists and is writable
+sudo mkdir -p "$MACBOOK_HOURLY_BACKUP_DIR"
+if [ ! -w "$MACBOOK_HOURLY_BACKUP_DIR" ]; then
+    echo "Error: Backup directory $MACBOOK_HOURLY_BACKUP_DIR is not writable!"
+    echo "Please check permissions and try again."
+    exit 1
+fi
 
 # Find the latest backup for hardlinking
-LATEST_BACKUP=$(find "$BACKUP_ROOT" -maxdepth 1 -type d | grep -E "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}$" | sort -r | head -n1)
+LATEST_BACKUP=$(find "$MACBOOK_HOURLY_BACKUP_DIR" -maxdepth 1 -type d | grep -E "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}$" | sort -r | head -n1)
 
-# Check if source drive is mounted
-if [ ! -d "$SOURCE" ]; then
-    echo "Error: Source directory $SOURCE is not accessible!"
-    exit 1
-fi
-
-# Check if destination drive is mounted
-if [ ! -d "$(dirname "$BACKUP_ROOT")" ]; then
-    echo "Error: Destination drive $(dirname "$BACKUP_ROOT") is not mounted!"
-    exit 1
-fi
-
-# Ensure backup root exists
-mkdir -p "$BACKUP_ROOT"
-
-# Get exclude file path
-EXCLUDE_FILE="$SCRIPT_DIR/exclude_patterns.txt"
-
-# Check if exclude file exists
-if [ ! -f "$EXCLUDE_FILE" ]; then
-    echo "Error: Exclude patterns file not found at: $EXCLUDE_FILE"
-    exit 1
-fi
+# Create log file
+LOG_FILE="$MACBOOK_HOURLY_BACKUP_DIR/backup_${TIMESTAMP}.log"
 
 # Common rsync options
 RSYNC_OPTS=(
     -aEAXHv        # archive, extended attrs, ACLs, xattrs, hardlinks, verbose
     --delete       # delete extraneous files from dest dirs
-    --exclude-from="$EXCLUDE_FILE"  # exclude patterns
     --ignore-errors  # ignore errors
     --no-perms      # don't preserve permissions
     --chmod=u+rwX   # make files readable/writable by user
-    --log-file="$LOG_FILE"  # log all actions
+    --exclude-from="$EXCLUDE_FILE"  # use exclude patterns
 )
 
-echo "Starting backup at $(date)" | tee -a "$LOG_FILE"
-echo "Source: $SOURCE" | tee -a "$LOG_FILE"
-echo "Destination: $CURRENT_BACKUP" | tee -a "$LOG_FILE"
-echo "Exclude patterns from: $EXCLUDE_FILE" | tee -a "$LOG_FILE"
+echo "Starting backup at $(date)" | sudo tee -a "$LOG_FILE"
+echo "Source: $SOURCE_ROOT" | sudo tee -a "$LOG_FILE"
+echo "Destination: $CURRENT_BACKUP" | sudo tee -a "$LOG_FILE"
+echo "Using exclude patterns from: $EXCLUDE_FILE" | sudo tee -a "$LOG_FILE"
 
-# Backup command with link-dest if previous backup exists
 if [ -n "$LATEST_BACKUP" ]; then
-    echo "Creating incremental backup using hardlinks to: $LATEST_BACKUP" | tee -a "$LOG_FILE"
-    rsync "${RSYNC_OPTS[@]}" \
-        --link-dest="$LATEST_BACKUP" \
-        "$SOURCE/" "$CURRENT_BACKUP"
+    echo "Creating incremental backup using hardlinks to: $LATEST_BACKUP" | sudo tee -a "$LOG_FILE"
+    sudo rsync "${RSYNC_OPTS[@]}" --link-dest="$LATEST_BACKUP" "$SOURCE_ROOT/" "$CURRENT_BACKUP" 2>&1 | sudo tee -a "$LOG_FILE"
 else
-    echo "Creating initial backup (no previous backup found)" | tee -a "$LOG_FILE"
-    rsync "${RSYNC_OPTS[@]}" \
-        "$SOURCE/" "$CURRENT_BACKUP"
+    echo "Creating initial backup (no previous backup found)" | sudo tee -a "$LOG_FILE"
+    sudo rsync "${RSYNC_OPTS[@]}" "$SOURCE_ROOT/" "$CURRENT_BACKUP" 2>&1 | sudo tee -a "$LOG_FILE"
 fi
 
-echo "Backup completed at $(date)" | tee -a "$LOG_FILE"
+echo "Backup completed at $(date)" | sudo tee -a "$LOG_FILE"
 echo "Log file: $LOG_FILE"
 
-# Even if some files were not copied (exit code 23), consider backup successful
-if [ $? -eq 23 ]; then
-    echo "Warning: Some files were not transferred (permissions/locked files)" | tee -a "$LOG_FILE"
+# Exit with success even if rsync returns code 23 (some files were not transferred)
+if [ ${PIPESTATUS[0]} -eq 23 ]; then
+    echo "Warning: Some files were not transferred (permissions/locked files)" | sudo tee -a "$LOG_FILE"
     exit 0
 fi 

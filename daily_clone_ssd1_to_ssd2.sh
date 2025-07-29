@@ -10,14 +10,29 @@ set -e
 # Source configuration files
 source "var/paths.conf"
 
-# Check if source and destination volumes are mounted
+# Check if source volume is mounted and readable
 if [ ! -d "$SSD1_VOLUME" ]; then
     echo "Error: Source drive $SSD1_VOLUME is not mounted!"
+    echo "Please connect the source drive and try again."
     exit 1
 fi
 
+if [ ! -r "$SSD1_VOLUME" ]; then
+    echo "Error: Source drive $SSD1_VOLUME is not readable!"
+    echo "Please check permissions and try again."
+    exit 1
+fi
+
+# Check if destination volume is mounted and writable
 if [ ! -d "$SSD2_VOLUME" ]; then
     echo "Error: Destination drive $SSD2_VOLUME is not mounted!"
+    echo "Please connect the backup drive and try again."
+    exit 1
+fi
+
+if [ ! -w "$SSD2_VOLUME" ]; then
+    echo "Error: Destination drive $SSD2_VOLUME is not writable!"
+    echo "Please check permissions and try again."
     exit 1
 fi
 
@@ -27,6 +42,13 @@ LATEST_BACKUP=$(find "$SSD1_DAILY_BACKUP_DIR" -maxdepth 1 -type d | grep -E "[0-
 
 # Create backup directory
 sudo mkdir -p "$SSD1_DAILY_BACKUP_DIR"
+
+# Check if backup directory is writable
+if [ ! -w "$SSD1_DAILY_BACKUP_DIR" ]; then
+    echo "Error: Backup directory $SSD1_DAILY_BACKUP_DIR is not writable!"
+    echo "Please check permissions and try again."
+    exit 1
+fi
 
 # Check if exclude patterns file exists
 EXCLUDE_FILE="exclude_patterns.txt"
