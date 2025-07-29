@@ -1,3 +1,14 @@
+# iCloud Drive - uncomment these if you don't want to backup iCloud files
+# */Library/Mobile Documents/com~apple~CloudDocs/
+# */Library/Mobile Documents/com~apple~*/
+
+# iCloud Drive temporary and system files
+*/Library/Mobile Documents/com~apple~CloudDocs/.Trash/*
+*/Library/Mobile Documents/com~apple~CloudDocs/.tmp/*
+*.icloud
+.DS_Store
+._*
+
 # System directories and files
 /Volumes/*          # External drives
 /dev/*             # Device files

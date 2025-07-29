@@ -25,6 +25,7 @@ SOURCE="$SOURCE_ROOT"
 # Create timestamp for current backup
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
 CURRENT_BACKUP="$BACKUP_ROOT/$TIMESTAMP"
+LOG_FILE="$BACKUP_ROOT/backup_${TIMESTAMP}.log"
 
 # Find the latest backup for hardlinking
 LATEST_BACKUP=$(find "$BACKUP_ROOT" -maxdepth 1 -type d | grep -E "[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}$" | sort -r | head -n1)
@@ -53,18 +54,39 @@ if [ ! -f "$EXCLUDE_FILE" ]; then
     exit 1
 fi
 
+# Common rsync options
+RSYNC_OPTS=(
+    -aEAXHv        # archive, extended attrs, ACLs, xattrs, hardlinks, verbose
+    --delete       # delete extraneous files from dest dirs
+    --exclude-from="$EXCLUDE_FILE"  # exclude patterns
+    --ignore-errors  # ignore errors
+    --no-perms      # don't preserve permissions
+    --chmod=u+rwX   # make files readable/writable by user
+    --log-file="$LOG_FILE"  # log all actions
+)
+
+echo "Starting backup at $(date)" | tee -a "$LOG_FILE"
+echo "Source: $SOURCE" | tee -a "$LOG_FILE"
+echo "Destination: $CURRENT_BACKUP" | tee -a "$LOG_FILE"
+echo "Exclude patterns from: $EXCLUDE_FILE" | tee -a "$LOG_FILE"
+
 # Backup command with link-dest if previous backup exists
 if [ -n "$LATEST_BACKUP" ]; then
-    echo "Creating incremental backup using hardlinks to: $LATEST_BACKUP"
-    rsync -aEAXHv --delete \
-        --exclude-from="$EXCLUDE_FILE" \
+    echo "Creating incremental backup using hardlinks to: $LATEST_BACKUP" | tee -a "$LOG_FILE"
+    rsync "${RSYNC_OPTS[@]}" \
         --link-dest="$LATEST_BACKUP" \
-        "$SOURCE" "$CURRENT_BACKUP"
+        "$SOURCE/" "$CURRENT_BACKUP"
 else
-    echo "Creating initial backup (no previous backup found)"
-    rsync -aEAXHv --delete \
-        --exclude-from="$EXCLUDE_FILE" \
-        "$SOURCE" "$CURRENT_BACKUP"
+    echo "Creating initial backup (no previous backup found)" | tee -a "$LOG_FILE"
+    rsync "${RSYNC_OPTS[@]}" \
+        "$SOURCE/" "$CURRENT_BACKUP"
 fi
 
-echo "Backup completed successfully to: $CURRENT_BACKUP" 
+echo "Backup completed at $(date)" | tee -a "$LOG_FILE"
+echo "Log file: $LOG_FILE"
+
+# Even if some files were not copied (exit code 23), consider backup successful
+if [ $? -eq 23 ]; then
+    echo "Warning: Some files were not transferred (permissions/locked files)" | tee -a "$LOG_FILE"
+    exit 0
+fi 
